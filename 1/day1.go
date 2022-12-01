@@ -17,12 +17,11 @@ func main() {
 
 	for scanner.Scan() {
 		t := scanner.Text()
-		var elfCal int
+		cal, _ := strconv.Atoi(t)
 		if t != "" {
-			cal, _ := strconv.Atoi(t)
 			elfCals[len(elfCals)-1] += cal
 		} else {
-			elfCals = append(elfCals, elfCal)
+			elfCals = append(elfCals, cal)
 		}
 	}
 
