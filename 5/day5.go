@@ -4,35 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
+	"unicode"
 )
 
-/*
-    [D]
-[N] [C]
-[Z] [M] [P]
- 1   2   3
-*/
-/*
-[N]     [Q]         [N]
-[R]     [F] [Q]     [G] [M]
-[J]     [Z] [T]     [R] [H] [J]
-[T] [H] [G] [R]     [B] [N] [T]
-[Z] [J] [J] [G] [F] [Z] [S] [M]
-[B] [N] [N] [N] [Q] [W] [L] [Q] [S]
-[D] [S] [R] [V] [T] [C] [C] [N] [G]
-[F] [R] [C] [F] [L] [Q] [F] [D] [P]
- 1   2   3   4   5   6   7   8   9
-*/
-var stack = [][]rune{
-	{'F', 'D', 'B', 'Z', 'T', 'J', 'R', 'N'},
-	{'R', 'S', 'N', 'J', 'H'},
-	{'C', 'R', 'N', 'J', 'G', 'Z', 'F', 'Q'},
-	{'F', 'V', 'N','G','R','T','Q'},
-	{'L','T','Q','F'},
-	{'Q','C','W','Z','B','R','G','N'},
-	{'F', 'C','L','S','N','H','M'},
-	{'D','N','Q','M','T','J'},
-	{'P','G','S'},
+type move struct {
+	qty		int
+	from	int
+	to		int
 }
 
 func rev(s []rune) []rune {
@@ -42,25 +21,50 @@ func rev(s []rune) []rune {
 	return s
 }
 
+func getTopLetters(stacks [][]rune) (result string) {
+	for _, stack := range stacks {
+		if len(stack) > 0 {
+			result += string(stack[len(stack)-1])
+		}
+	}
+	return
+}
+
 func main() {
 	file, _ := os.Open("input.txt")
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
-
-	fmt.Println("start stack", stack)
+	stacks1 := make([][]rune,9)
+	stacks2 := make([][]rune,9)
+	moves := make([]move, 0)
 
 	for scanner.Scan() {
 		t := scanner.Text()
-		var qtyFrom, stackFrom, stackTo int
-		fmt.Sscanf(t, "move %d from %d to %d", &qtyFrom, &stackFrom, &stackTo)
-		fmt.Println(qtyFrom, stackFrom, stackTo)
+		switch {
+		case strings.Contains(t, "["):
+			var stackIdx int
+			for i := 1; i < len(t)-1; i += 4 {
+				if unicode.IsLetter(rune(t[i])) {
+					stacks1[stackIdx] = append([]rune{rune(t[i])}, stacks1[stackIdx]...)
+					stacks2[stackIdx] = append([]rune{rune(t[i])}, stacks2[stackIdx]...)
+				}
+				stackIdx++
+			}
+		case strings.Contains(t, "move"):
+			var qtyFrom, stackFrom, stackTo int
+			fmt.Sscanf(t, "move %d from %d to %d", &qtyFrom, &stackFrom, &stackTo)
+			moves = append(moves, move{qty: qtyFrom, from: stackFrom-1, to: stackTo-1})
+		}
+	}
 
-		stack[stackTo-1] = append(stack[stackTo-1], rev(stack[stackFrom-1][len(stack[stackFrom-1])-qtyFrom:])...)
-		stack[stackFrom-1] = stack[stackFrom-1][:len(stack[stackFrom-1])-qtyFrom]
-		fmt.Println("updated stack", stack)
+	for _, m := range moves {
+		stacks1[m.to] = append(stacks1[m.to], rev(stacks1[m.from][len(stacks1[m.from])-m.qty:])...)
+		stacks1[m.from] = stacks1[m.from][:len(stacks1[m.from])-m.qty]
+
+		stacks2[m.to] = append(stacks2[m.to], stacks2[m.from][len(stacks2[m.from])-m.qty:]...)
+		stacks2[m.from] = stacks2[m.from][:len(stacks2[m.from])-m.qty]
 	}
-	fmt.Println(stack)
-	for _, s := range stack {
-		fmt.Print(string(s[len(s)-1]))
-	}
+
+	fmt.Println("part 1:", getTopLetters(stacks1))
+	fmt.Println("part 2:", getTopLetters(stacks2))
 }
