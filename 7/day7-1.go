@@ -26,13 +26,11 @@ func (d *Dir) size() (totalSize int) {
 	return
 }
 
-func (d *Dir) totalSizeOfDirsLessThan100k() int {
+func (d *Dir) getSubDirSize() int {
 	size := d.size()
-	fmt.Println("Recursive in dir", d.name, "size", d.size())
-
 	for _, dir := range d.subdirs {
 		d = dir
-		size += d.totalSizeOfDirsLessThan100k()
+		size += d.getSubDirSize()
 	}
 	return size
 }
@@ -52,15 +50,6 @@ func main() {
 	for scanner.Scan() {
 		t := scanner.Text()
 		switch {
-		case t == "$ cd ..":
-			position = position.parentDir
-		case strings.Contains(t, "cd") && !strings.Contains(t, "/"):
-			data := strings.Split(t, " ")
-			name := data[len(data)-1]
-			fmt.Println("cd to dir:", name)
-			position = position.subdirs[name]
-		case t == "$ ls":
-			// No action
 		case t == "$ cd /":
 			position = &root
 		case t[0:3] == "dir":
@@ -72,6 +61,15 @@ func main() {
 				parentDir: position,
 			}
 			position.subdirs[t[4:]] = &newDir
+		case t == "$ cd ..":
+			position = position.parentDir
+		case len(t) >= 5 && t[0:5] == "$ cd " && !strings.Contains(t, "/"):
+			data := strings.Split(t, " ")
+			name := data[len(data)-1]
+			fmt.Println("cd to dir:", name)
+			position = position.subdirs[name]
+		case t == "$ ls":
+			// No action
 		default:
 			var fileSize int
 			var fileName string
@@ -83,5 +81,17 @@ func main() {
 		fmt.Println("dir", position.name, "dir size", position.size())
 	}
 
-	fmt.Println(root.totalSizeOfDirsLessThan100k())
+	var totSize int
+ 	var recur func(d *Dir)
+
+	recur = func(d *Dir) {
+		if d.getSubDirSize() < 100000 {
+			totSize += d.getSubDirSize()
+		}
+		for _, dir := range d.subdirs {
+			recur(dir)
+		}
+	}
+	recur(&root)
+	fmt.Println("recur size", totSize)
 }
