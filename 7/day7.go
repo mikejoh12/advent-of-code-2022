@@ -8,15 +8,15 @@ import (
 )
 
 type File struct {
-	name		string
-	size		int
+	name string
+	size int
 }
 
 type Dir struct {
-	name		string
-	files		map[string]File
-	subdirs		map[string]*Dir
-	parentDir	*Dir
+	name      string
+	files     map[string]File
+	subdirs   map[string]*Dir
+	parentDir *Dir
 }
 
 func (d *Dir) size() (totalSize int) {
@@ -26,11 +26,11 @@ func (d *Dir) size() (totalSize int) {
 	return
 }
 
-func (d *Dir) getSubDirSize() int {
+func (d *Dir) getTotalSize() int {
 	size := d.size()
 	for _, dir := range d.subdirs {
 		d = dir
-		size += d.getSubDirSize()
+		size += d.getTotalSize()
 	}
 	return size
 }
@@ -41,9 +41,9 @@ func main() {
 	scanner.Split(bufio.ScanLines)
 
 	root := Dir{
-		name:  "root",
+		name:    "root",
 		subdirs: make(map[string]*Dir),
-		files: make(map[string]File),
+		files:   make(map[string]File),
 	}
 	position := &root
 
@@ -53,52 +53,51 @@ func main() {
 		case t == "$ cd /":
 			position = &root
 		case t[0:3] == "dir":
-			newDir := Dir{
-				name: t[4:],
-				subdirs: make(map[string]*Dir),
-				files: make(map[string]File),
-				parentDir: position,
+			if _, ok := position.subdirs[t[4:]]; !ok {
+				newDir := Dir{
+					name:      t[4:],
+					subdirs:   make(map[string]*Dir),
+					files:     make(map[string]File),
+					parentDir: position,
+				}
+				position.subdirs[t[4:]] = &newDir
 			}
-			position.subdirs[t[4:]] = &newDir
 		case t == "$ cd ..":
 			position = position.parentDir
 		case len(t) >= 5 && t[0:5] == "$ cd " && !strings.Contains(t, "/"):
 			data := strings.Split(t, " ")
-			name := data[len(data)-1]
-			position = position.subdirs[name]
+			position = position.subdirs[data[len(data)-1]]
 		case t == "$ ls":
-			// No action
 		default:
 			var fileSize int
 			var fileName string
 			fmt.Sscanf(t, "%d %s", &fileSize, &fileName)
-			file := File{name: fileName, size: fileSize}
-			position.files[fileName] = file
+			if _, ok := position.files[fileName]; !ok {
+				file := File{name: fileName, size: fileSize}
+				position.files[fileName] = file
+			}
 		}
 	}
 
 	var totSize int
- 	var recur func(d *Dir)
+	var recur func(d *Dir)
 
-	unusedSpace := 70000000 - root.getSubDirSize()
-	dirToDeleteSpace := root.getSubDirSize()
+	unusedSpace, deleteSpace := 70000000 - root.getTotalSize(), root.getTotalSize()
 
 	recur = func(d *Dir) {
-		subDirSize := d.getSubDirSize()
-
+		subDirSize := d.getTotalSize()
 		if subDirSize < 100000 {
 			totSize += subDirSize
 		}
-
-		if unusedSpace + subDirSize >= 30000000 {
-			dirToDeleteSpace = subDirSize
+		if unusedSpace+subDirSize >= 30000000 && subDirSize < deleteSpace {
+			deleteSpace = subDirSize
 		}
-
 		for _, dir := range d.subdirs {
 			recur(dir)
 		}
 	}
 	recur(&root)
-	fmt.Println("recur size:", totSize)
-	fmt.Println("dir to delete space:", dirToDeleteSpace)
+
+	fmt.Println("part 1:", totSize)
+	fmt.Println("part 2:", deleteSpace)
 }
