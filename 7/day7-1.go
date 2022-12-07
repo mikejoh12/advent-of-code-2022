@@ -53,7 +53,6 @@ func main() {
 		case t == "$ cd /":
 			position = &root
 		case t[0:3] == "dir":
-			fmt.Println("Adding dir:", t[4:])
 			newDir := Dir{
 				name: t[4:],
 				subdirs: make(map[string]*Dir),
@@ -66,7 +65,6 @@ func main() {
 		case len(t) >= 5 && t[0:5] == "$ cd " && !strings.Contains(t, "/"):
 			data := strings.Split(t, " ")
 			name := data[len(data)-1]
-			fmt.Println("cd to dir:", name)
 			position = position.subdirs[name]
 		case t == "$ ls":
 			// No action
@@ -74,24 +72,33 @@ func main() {
 			var fileSize int
 			var fileName string
 			fmt.Sscanf(t, "%d %s", &fileSize, &fileName)
-			fmt.Println("adding file to dir", position.name ,fileName, fileSize)
 			file := File{name: fileName, size: fileSize}
 			position.files[fileName] = file
 		}
-		fmt.Println("dir", position.name, "dir size", position.size())
 	}
 
 	var totSize int
  	var recur func(d *Dir)
 
+	unusedSpace := 70000000 - root.getSubDirSize()
+	dirToDeleteSpace := root.getSubDirSize()
+
 	recur = func(d *Dir) {
-		if d.getSubDirSize() < 100000 {
-			totSize += d.getSubDirSize()
+		subDirSize := d.getSubDirSize()
+
+		if subDirSize < 100000 {
+			totSize += subDirSize
 		}
+
+		if unusedSpace + subDirSize >= 30000000 {
+			dirToDeleteSpace = subDirSize
+		}
+
 		for _, dir := range d.subdirs {
 			recur(dir)
 		}
 	}
 	recur(&root)
-	fmt.Println("recur size", totSize)
+	fmt.Println("recur size:", totSize)
+	fmt.Println("dir to delete space:", dirToDeleteSpace)
 }
