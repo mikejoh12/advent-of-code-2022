@@ -41,17 +41,13 @@ func main() {
 		fmt.Sscanf(t, "%s %d", &op, &k)
 
 		drawPixel(display, cycle, x)
-		switch op {
-		case "noop":
-			cycle += 1
-			if isMeasureCycle(cycle) {
-				sigStrSum += cycle * x
-			}
-		case "addx":
-			cycle++
-			if isMeasureCycle(cycle) {
-				sigStrSum += cycle * x
-			}
+		cycle++
+
+		if isMeasureCycle(cycle) {
+			sigStrSum += cycle * x
+		}
+
+		if op == "addx" {
 			drawPixel(display, cycle, x)
 			cycle++
 			if isMeasureCycle(cycle) {
