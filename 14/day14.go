@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"image"
-	"math"
 	"os"
 	"strings"
 )
@@ -32,7 +31,7 @@ func (g *grid) dropSand(maxY int) bool {
 	downLeft := image.Point{-1, 1}
 	downRight := image.Point{1, 1}
 	sandCoord := image.Point{500, 0}
-	
+
 	for {
 		if sandCoord.Y == maxY || (*g)[sandCoord.Y][sandCoord.X] == 'o' {
 			return false
@@ -100,8 +99,7 @@ func main() {
 	scanner.Split(bufio.ScanLines)
 
 	var paths []path
-	var maxX, maxY int
-	minX, minY := math.MaxInt, math.MaxInt
+	var maxY int
 
 	for scanner.Scan() {
 		t := scanner.Text()
@@ -111,8 +109,7 @@ func main() {
 			var x, y int
 			fmt.Sscanf(p, "%d,%d", &x, &y)
 			onePath = append(onePath, image.Point{x, y})
-			minX, minY = min(minX, x), min(minY, y)
-			maxX, maxY = max(maxX, x), max(maxY, y)
+			maxY = max(maxY, y)
 		}
 		paths = append(paths, onePath)
 	}
