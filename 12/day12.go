@@ -3,24 +3,49 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"image"
 	"os"
-	"strings"
 )
 
-type coord struct {
-	x int
-	y int
-}
-
-func getStartPos(grid [][]string) coord {
+func getStartPos(grid [][]rune) image.Point {
 	for y, row := range grid {
 		for x, char := range row {
-			if char == "S" {
-				return coord{y: y, x: x}
+			if char == 'S' {
+				return image.Point{x, y}
 			}
 		}
 	}
-	return coord{-1, -1}
+	return image.Point{-1, -1}
+}
+
+func getAdjList(grid [][]rune) map[image.Point][]image.Point {
+	var directions = [4]image.Point{{0, 1}, {0, -1}, {-1, 0}, {1, 0}}
+	adjList := make(map[image.Point][]image.Point)
+
+	for y, row := range grid {
+		for x, r := range row {
+			adjList[image.Point{x, y}] = []image.Point{}
+			for _, direction := range directions {
+				newPos := image.Point{x, y}.Add(direction)
+				if newPos.Y >= 0 && newPos.Y < len(grid) && newPos.X >= 0 && newPos.X < len(grid[0]) {
+
+					// Start pos
+					if r == 'S' && grid[newPos.Y][newPos.X] == 'a' {
+						adjList[image.Point{x, y}] = append(adjList[image.Point{x, y}], newPos)
+					}
+					// Max one step up
+					if grid[newPos.Y][newPos.X] != 'S' && grid[newPos.Y][newPos.X] != 'E' && grid[newPos.Y][newPos.X] <= r+1 {
+						adjList[image.Point{x, y}] = append(adjList[image.Point{x, y}], newPos)
+					}
+					// End pos
+					if (r == 'y' || r == 'z') && grid[newPos.Y][newPos.X] == 'E' {
+						adjList[image.Point{x, y}] = append(adjList[image.Point{x, y}], newPos)
+					}
+				}
+			}
+		}
+	}
+	return adjList
 }
 
 func main() {
@@ -28,48 +53,49 @@ func main() {
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
 
-	var grid [][]string
+	var grid [][]rune
 
 	for scanner.Scan() {
-		t := scanner.Text()
-		row := strings.Split(t, "")
-		grid = append(grid, row)
+		rowStr := scanner.Text()
+		rowRunes := make([]rune, 0)
+		for _, r := range rowStr {
+			rowRunes = append(rowRunes, r)
+		}
+		grid = append(grid, rowRunes)
 	}
 
-	var find func(pos coord, steps int, visited map[coord]bool, curRune rune)
-	var directions = [4]coord{{0, 1}, {0, -1}, {-1, 0}, {1, 0}}
+	var find func(pos image.Point, steps int, visited map[image.Point]bool, curRune rune)
 	minSteps := 99999
 
 	start := getStartPos(grid)
+	adjList := getAdjList(grid)
+	fmt.Println(adjList)
+	fmt.Println("start", start)
 
-	find = func(pos coord, steps int, visited map[coord]bool, curRune rune) {
+	find = func(pos image.Point, steps int, visited map[image.Point]bool, curRune rune) {
 		visited[pos] = true
-		for _, direction := range directions {
-			newPos := coord{y: pos.y + direction.y, x: pos.x + direction.x}
-			if _, ok := visited[newPos]; !ok &&
-				newPos.y >= 0 && newPos.y < len(grid) && newPos.x >= 0 && newPos.x < len(grid[0]) {
-				if (curRune == 'y' || curRune == 'z') && grid[newPos.y][newPos.x] == "E" {
-					fmt.Println("Found path", visited)
+
+		for _, newPos := range adjList[pos] {
+			if _, ok := visited[newPos]; !ok {
+				if grid[newPos.Y][newPos.X] == 'E' {
+					fmt.Println("Found path - steps", steps+1)
 					if steps+1 < minSteps {
 						minSteps = steps + 1
-						return
 					}
+					return
 				}
 
-				if rune(grid[newPos.y][newPos.x][0]) <= curRune+1 {
-					newVisited := make(map[coord]bool)
-					for c, visited := range visited {
-						newVisited[c] = visited
-					}
-					find(newPos, steps+1, newVisited, rune(grid[newPos.y][newPos.x][0]))
+				newVisited := make(map[image.Point]bool)
+				for c, visited := range visited {
+					newVisited[c] = visited
 				}
-
+				find(newPos, steps+1, newVisited, grid[newPos.Y][newPos.X])
 			}
 		}
+
 	}
 
-	find(start, 0, make(map[coord]bool), 'a'-1)
+	find(start, 0, make(map[image.Point]bool), 'S')
 
-	fmt.Println(grid, "start", start)
 	fmt.Println("minSteps", minSteps)
 }
