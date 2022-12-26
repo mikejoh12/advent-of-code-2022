@@ -44,7 +44,6 @@ elfLoop:
 			for _, minorDir := range dir {
 				pos := elf.position.Add(minorDir)
 				if _, ok := e.occupied[pos]; ok {
-					fmt.Println("elf not clear allAround", elf)
 					isClearAround = false
 				}
 			}
@@ -80,7 +79,7 @@ elfLoop:
 	}
 }
 
-func (e *elves) secondHalfElves() {
+func (e *elves) secondHalfElves() (moves bool) {
 	for elfIdx, cElf := range e.locations {
 		count, ok := e.proposed[cElf.proposed]
 		if ok && count == 1 {
@@ -91,6 +90,7 @@ func (e *elves) secondHalfElves() {
 			e.uLeft.X = min(e.uLeft.X, cElf.proposed.X)
 			e.lRight.Y = max(e.lRight.Y, cElf.proposed.Y)
 			e.lRight.X = max(e.lRight.X, cElf.proposed.X)
+			moves = true
 		}
 	}
 
@@ -100,6 +100,7 @@ func (e *elves) secondHalfElves() {
 		e.locations[elfIdx].proposed = e.locations[elfIdx].position // set to current pos
 	}
 	e.directions = append(e.directions[1:], e.directions[0])
+	return
 }
 
 func NewElves(cd []byte) *elves {
@@ -132,6 +133,7 @@ func NewElves(cd []byte) *elves {
 	return &newElves
 }
 
+// Print prints out the elf positions
 func (e *elves) print() {
 	for y := e.uLeft.Y; y <= e.lRight.Y; y++ {
 		var row string
@@ -147,23 +149,25 @@ func (e *elves) print() {
 }
 
 func (e *elves) gndTiles() int {
-	return (e.lRight.X - e.uLeft.X+1) * (e.lRight.Y - e.uLeft.Y+1) - len(e.locations) 
+	return (e.lRight.X-e.uLeft.X+1)*(e.lRight.Y-e.uLeft.Y+1) - len(e.locations)
 }
 
 func main() {
 	craterData, _ := os.ReadFile("input.txt")
 	e := NewElves(craterData)
-	e.print()
 
-	for i := 0; i < 10; i++ {
-		fmt.Println("--------------------- After round:", i+1)
-
+	moving := true
+	round := 1
+	for moving {
 		e.firstHalfElves()
-		e.secondHalfElves()
-		fmt.Println("elves", e.locations)
-		fmt.Println("e proposed", e.proposed)
-		e.print()
+		moving = e.secondHalfElves()
+		if !moving {
+			fmt.Println("part 2:", round)
+			break
+		}
+		if round == 10 {
+			fmt.Println("part 1", e.gndTiles())
+		}
+		round++
 	}
-
-	fmt.Println(e.gndTiles())
 }
