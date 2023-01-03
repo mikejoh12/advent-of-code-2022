@@ -82,5 +82,5 @@ func main() {
 			sum += i + 1
 		}
 	}
-	fmt.Println("part 1", sum)
+	fmt.Println("part 1:", sum)
 }
