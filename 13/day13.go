@@ -1,64 +1,86 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-	"unicode"
 )
 
-func newPairs(f string) (output [][]any) {
-	chars, _ := os.ReadFile("input.txt")
+type order int
+const (
+	inOrder order = iota
+	equal
+	notInOrder
+)	
+
+func newPairs(f string) (output [][2][]any) {
+	chars, _ := os.ReadFile(f)
 	pairStrings := strings.Split(string(chars), "\n\n")
 	for _, pairStr := range pairStrings {
 		packetStrings := strings.Split(pairStr, "\n")
-		var newPair []any
-		for _, packetStr := range packetStrings {
-			new := getSlice(packetStr)
-			newPair = append(newPair, new)
+		var newPair [2][]any
+		for i, packetStr := range packetStrings {
+			var packet []any
+			json.Unmarshal([]byte(packetStr), &packet)
+			newPair[i] = packet
 		}
 		output = append(output, newPair)
 	}
 	return
 }
 
-func getSubList(s string, idx int) (sublist string, endIdx int) {
-	stack := make([]rune, 0)
-	var startHeight int
-	for i, r := range s{
-		switch {
-		case i == idx && r == '[':
-			startHeight = len(stack)
-		case r == ']' && len(stack) == startHeight:
-			return s[idx:i+1], i
-		case r == '[':
-			stack = append(stack, '[')
-		case r == ']':
-			stack = stack[:len(stack)-1]
-		}
-	}
-	return "error in getSubList", -1
+func isInOrder(left, right any) order {
+		switch left := left.(type) {
+		case float64:
+			switch right := right.(type) {
+			case float64:
+				if left < right {
+					return inOrder
+				} else if left == right {
+					return equal
+				}
+				return notInOrder
+			case []any:
+				return isInOrder([]any{left}, right)
+			}			
 
-}
+		case []any:
+			switch right := right.(type) {
+			case float64:
+				return isInOrder(left, []any{right})
+			case []any:
+				if len(left) == 0 && len(right) > 0 {
+					return inOrder
+				}
 
-func getSlice(p1 string) (output []any) {
-	for i := 0; i < len(p1); i++ {
-		switch {
-		case unicode.IsDigit(rune(p1[i])):
-			output = append(output, int(p1[i])-'0')
-		case i != 0 && p1[i] == '[':
-			sub, endIdx := getSubList(p1, i)
-			i = endIdx
-			newSlice := getSlice(sub)
-			output = append(output, newSlice)
+				for i, leftEl := range left {
+					if i >= len(right) {
+						return notInOrder
+					}
+
+					orderResult := isInOrder(leftEl, right[i])
+					switch orderResult {
+					case inOrder, notInOrder:
+						return orderResult
+					case equal:
+						if i == len(left)-1 && len(left) < len(right){
+							return inOrder
+						}
+					}
+				}
+			}
 		}
-	}
-	return output
+	return equal
 }
 
 func main() {
-	pairs := newPairs("input.txt")
-	for pairIdx, pair := range pairs {
-		fmt.Println(pairIdx, pair)
+	p := newPairs("input.txt")
+	sum := 0
+	for i, pair := range p {
+		if isInOrder(pair[0], pair[1]) == inOrder{
+			sum += i + 1
+		}
 	}
+	fmt.Println("part 1", sum)
 }
